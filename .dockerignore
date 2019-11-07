@@ -2,8 +2,11 @@ __pycache__
 .git
 .gitignore
 .vscode
+.dockerignore
+Dockerfile
 LICENCE
 README.md
 Pipfile
 Pipfile.lock
 tests
+osykdata
