@@ -7,7 +7,6 @@ verify_ssl = true
 pylint = "*"
 autopep8 = "*"
 rope = "*"
-pep8 = "*"
 
 [packages]
 hug = "*"

@@ -1,5 +1,4 @@
 """Rest API for EFKA"""
-
 import hug
 import osyk
 import efka
