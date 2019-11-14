@@ -2,6 +2,7 @@
 import hug
 import osyk
 import efka
+import mis
 DBF = 'osyk.sql3'
 
 
@@ -50,3 +51,17 @@ def calc_efka(kad: hug.types.text,
               amount: hug.types.float_number):
     """Calculate efka given kad, eid, period and amount"""
     return efka.calc_efka(DBF, kad, eid, period, amount)
+
+
+@hug.get('/mis', examples='kad=5540&eid=348220&per=201911&typ=2&apod=55&meres=3')
+def c_mis(kad: hug.types.text,
+          eid: hug.types.text,
+          per: hug.types.number,
+          typ: hug.types.number,
+          apod: hug.types.float_number,
+          meres: hug.types.float_number):
+    adi = {
+        'kad': kad, 'eid': eid, 'per': per, 'typ': typ, 'apod': apod,
+        'meres-ika': 25, 'meres': meres
+    }
+    return mis.calc_mis(DBF, adi)

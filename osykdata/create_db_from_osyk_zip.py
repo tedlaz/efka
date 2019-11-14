@@ -9,13 +9,19 @@ Steps:
 """
 import sqlite3
 
+RPL = (
+    (',', ', '),
+    ('- ', '-'), (' -', '-'),
+    ('( ', '('), (' )', ')'),
+    (':', ': ')
+)
 
-def fix(some_text):
-    ftxt = some_text.replace(',', ', ')
-    ftxt = ftxt.replace('-', ' - ')
-    ftxt = ftxt.replace('( ', '(')
-    ftxt = ftxt.replace(' )', ')')
-    ftxt = ftxt.replace(':', ': ')
+
+def replace(txt, tvals=RPL):
+    """Replace multiple characters in a string"""
+    ftxt = str(txt)  # Make sure we deal with string
+    for tval in tvals:
+        ftxt = ftxt.replace(tval[0], tval[1])
     ftxt = ' '.join(ftxt.split())  # To remove more than one spaces
     return ftxt
 
@@ -29,7 +35,7 @@ def parse_kad(fname='kad.txt'):
                 continue
             try:
                 kad, kadp = (fld.strip() for fld in line.split(';'))
-                lkad.append((kad, fix(kadp)))
+                lkad.append((kad, replace(kadp)))
             except ValueError:
                 print('-->', line, len(line))
                 errors += 1
@@ -46,7 +52,7 @@ def parse_eid(fname='eid.txt'):
                 continue
             try:
                 eid, eidp = (fld.strip() for fld in line.split(';'))
-                leid.append((eid, fix(eidp)))
+                leid.append((eid, replace(eidp)))
             except ValueError:
                 print('-->', line, len(line))
                 errors += 1
@@ -80,7 +86,7 @@ def parse_kpk(fname='kpk.txt'):
                 enos = float(enos)
                 etis = float(etis)
                 total = float(total)
-                lkpk.append((kpk, fix(kpkp), enos, etis, total, per))
+                lkpk.append((kpk, replace(kpkp), enos, etis, total, per))
             except ValueError:
                 print('-->', line, len(line))
                 errors += 1
@@ -107,21 +113,21 @@ def parse_kek(fname='kek.txt'):
 
 
 def create_database(dbf):
-    conn = sqlite3.connect(dbf)
-    c = conn.cursor()
-    c.execute('CREATE TABLE kad (kad, kadp)')
-    c.execute('CREATE TABLE eid (eid, eidp)')
-    c.execute('CREATE TABLE kpk (kpk, kpkp, ergnos, etis, synolo, period)')
-    c.execute('CREATE TABLE kadeidkpk (kad, eid, kpk, apo, eos)')
-    c.executemany('INSERT INTO kad VALUES(?,?)', parse_kad())
-    c.executemany('INSERT INTO eid VALUES(?,?)', parse_eid())
-    c.executemany('INSERT INTO kpk VALUES(?,?,?,?,?,?)', parse_kpk())
-    c.executemany('INSERT INTO kadeidkpk VALUES(?,?,?,?,?)', parse_kek())
-    conn.commit()
-    c.close()
+    con = sqlite3.connect(dbf)
+    cur = con.cursor()
+    cur.execute('CREATE TABLE kad (kad, kadp)')
+    cur.execute('CREATE TABLE eid (eid, eidp)')
+    cur.execute('CREATE TABLE kpk (kpk, kpkp, ergnos, etis, synolo, period)')
+    cur.execute('CREATE TABLE kadeidkpk (kad, eid, kpk, apo, eos)')
+    cur.executemany('INSERT INTO kad VALUES(?,?)', parse_kad())
+    cur.executemany('INSERT INTO eid VALUES(?,?)', parse_eid())
+    cur.executemany('INSERT INTO kpk VALUES(?,?,?,?,?,?)', parse_kpk())
+    cur.executemany('INSERT INTO kadeidkpk VALUES(?,?,?,?,?)', parse_kek())
+    con.commit()
+    cur.close()
     if dbf == ':memory:':
-        return conn
-    conn.close()
+        return con
+    con.close()
     return None
 
 
@@ -135,5 +141,6 @@ def test_memory_db():
 
 
 if __name__ == '__main__':
-    create_database('osyk.sql3')
+    # create_database('osyk.sql3')
     # test_memory_db()
+    print(replace('( sdf - sf,ted,popi:special, george )'))

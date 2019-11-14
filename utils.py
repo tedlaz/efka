@@ -2,7 +2,7 @@
 import math
 
 
-def rnd(number, decimals=0):
+def rnd(number, decimals=2):
     """Round half up float number"""
     multiplier = 10 ** decimals
     return math.floor(number * multiplier + 0.5) / multiplier
