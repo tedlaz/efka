@@ -19,3 +19,18 @@ def grup(txtval):
     ar2 = "ΑΕΗΙΟΥΩΙΥ"
     adi = dict(zip(ar1, ar2))
     return ''.join([adi.get(letter, letter.upper()) for letter in txtval])
+
+
+MON = [
+    'Ιανουάριος', 'Φεβρουάριος', 'Μάρτιος', 'Απρίλιος', 'Μάϊος', 'Ιούνιος',
+    'Ιούλιος', 'Αύγουστος', 'Σεπτέμβριος', 'Οκτώβριος', 'Νοέμβριος',
+    'Δεκέμβριος'
+]
+
+
+def humanize_period(period):
+    per = str(period)
+    assert len(per) == 6
+    year = per[:4]
+    month = int(per[4:])
+    return f'{MON[month-1]} {year}'

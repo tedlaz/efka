@@ -65,3 +65,57 @@ def c_mis(kad: hug.types.text,
         'meres-ika': 25, 'meres': meres
     }
     return mis.calc_mis(DBF, adi)
+
+
+@hug.get('/pmina', examples='kad=5540&eid=348220&per=201911&misthos=830.45')
+def c_misthos(kad: hug.types.text,
+              eid: hug.types.text,
+              per: hug.types.number,
+              misthos: hug.types.float_number,
+              meres: hug.types.float_number = 25,
+              oresnyxta: hug.types.float_number = 0,
+              oresargia: hug.types.float_number = 0,
+              meresargia: hug.types.float_number = 0
+              ):
+    adi = {
+        'kad': kad, 'eid': eid, 'per': per, 'misthos': misthos, 'meres': meres,
+        'oresnyxta': oresnyxta, 'oresargia': oresargia,
+        'meresargia': meresargia
+    }
+    return mis.calc_misthos(DBF, adi)
+
+
+@hug.get('/pmera', examples='kad=5540&eid=348220&per=201911&imeromistio=40&meres=10')
+def c_imeromistio(kad: hug.types.text,
+                  eid: hug.types.text,
+                  per: hug.types.number,
+                  imeromistio: hug.types.float_number,
+                  meres: hug.types.float_number,
+                  oresnyxta: hug.types.float_number = 0,
+                  oresargia: hug.types.float_number = 0,
+                  meresargia: hug.types.float_number = 0
+                  ):
+    adi = {
+        'kad': kad, 'eid': eid, 'per': per, 'imeromistio': imeromistio,
+        'meres': meres, 'oresnyxta': oresnyxta, 'oresargia': oresargia,
+        'meresargia': meresargia
+    }
+    return mis.calc_imeromistio(DBF, adi)
+
+
+@hug.get('/pora', examples='kad=5540&eid=348220&per=201911&oromistio=8&ores=10&meres=10')
+def c_oromistio(kad: hug.types.text,
+                eid: hug.types.text,
+                per: hug.types.number,
+                oromistio: hug.types.float_number,
+                ores: hug.types.float_number,
+                meres: hug.types.number,
+                oresnyxta: hug.types.float_number = 0,
+                oresargia: hug.types.float_number = 0
+                ):
+    adi = {
+        'kad': kad, 'eid': eid, 'per': per, 'oromistio': oromistio,
+        'ores': ores, 'oresnyxta': oresnyxta, 'oresargia': oresargia,
+        'meres': meres
+    }
+    return mis.calc_oromistio(DBF, adi)
