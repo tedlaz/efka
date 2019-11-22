@@ -1,193 +1,94 @@
-"""
-typ : 1=μισθός, 2=ημερομίσθιο, 3=ωρομίσθιο
-"""
+
 from utils import rnd, humanize_period
+import settings as s
 from efka import calc_efka
-MISTHOS, IMEROMISTHIO, OROMISTHIO = 1, 2, 3
+from taxes import calc_tax_monthly
 
 
-def calc_mis(dbf, par, typ='normal'):
-    """Υπολογισμός μισθοδοσίας
-       par: {'per': 201903,
-             'kad': 5540,
-             'eid': 913230,
-             'typ': 1,
-             'apod': 850.43,
-             'meres': 10,
-       }
+def calc_mis(par, osyk_db):
     """
-    par['perh'] = humanize_period(par['per'])
-    par['meres-bdomada'] = par.get('meres-bdomada', 6)
-    par['ores-bdomada'] = par.get('ores-bdomada', 40)
-
-    par['pososto-nyxta'] = 0.25
-    par['pososto-argia'] = 0.75
-    if par['typ'] == MISTHOS:
-        par['meres-ika'] = par.get('meres-ika', 25)
-        par['ores-nyxta'] = par.get('ores-nyxta', 0)
-        par['meres-argia'] = par.get('meres-argia', 0)
-        par['ores-argia'] = par.get('ores-argia', 0)
-        par['imeromisthio'] = rnd(par['apod'] / par['meres-ika'])
-        par['oromisthio'] = rnd(par['imeromisthio'] *
-                                par['meres-bdomada'] / par['ores-bdomada'])
-        par['apod-normal'] = rnd(
-            par['meres'] / par['meres-ika'] * par['apod'])
-
-    elif par['typ'] == IMEROMISTHIO:
-        par['ores-nyxta'] = par.get('ores-nyxta', 0)
-        par['meres-argia'] = par.get('meres-argia', 0)
-        par['ores-argia'] = par.get('ores-argia', 0)
-        par['imeromisthio'] = par['apod']
-        par['oromisthio'] = rnd(par['imeromisthio'] *
-                                par['meres-bdomada'] / par['ores-bdomada'])
-        par['apod-normal'] = rnd(par['meres'] * par['apod'])
-
-    elif par['typ'] == OROMISTHIO:
-        par['ores-nyxta'] = par.get('ores-nyxta', 0)
-        par['meres-argia'] = par.get('meres-argia', 0)
-        if par['meres-argia'] != 0:
-            raise ValueError('Δεν μπορεί ο ωρομίσθιος να έχει μέρες αργίας')
-        par['ores-argia'] = par.get('ores-argia', 0)
-        par['imeromisthio'] = 0
-        par['oromisthio'] = par['apod']
-        par['apod-normal'] = rnd(par['ores'] * par['oromisthio'])
-
-    else:
-        raise ValueError(f"Not legal par type={par['typ']}")
-    par['pros-nyxta'] = rnd(par['ores-nyxta'] *
-                            par['oromisthio'] * par['pososto-nyxta'])
-    par['pros-argia-meres'] = rnd(par['meres-argia']
-                                  * par['imeromisthio'] * par['pososto-argia'])
-    par['pros-argia-ores'] = rnd(par['ores-argia']
-                                 * par['oromisthio'] * par['pososto-argia'])
-    par['apod-periodoy'] = par['apod-normal'] + par['pros-nyxta'] + \
-        par['pros-argia-meres'] + par['pros-argia-ores']
-    defka = calc_efka(dbf, par['kad'], par['eid'],
-                      par['per'], par['apod-periodoy'])
-    final = {**par, **defka}
-    return final
-
-
-def calc_misthos(dbf, par):
-    """Υπολογισμός μηνιαίων αποδοχών μισθωτών
-        par: {
-            'per': 201903,
-            'kad': 5540,
-            'eid': 913230,
-            'misthos': 864.25,
-            'meres': 25  (default 25)
-        }
-
+    par: Dictionary με τις παρουσίες του εργαζομένου
     """
     par['month_year'] = humanize_period(par['per'])
-    par['misth_type'] = 'Μισθοδοσία μισθωτών'
-    par['minasmeres'] = par.get('minasmeres', 25)
-    par['bdommeres'] = par.get('bdommeres', 6)
-    par['bdomores'] = par.get('bdomores', 40)
-    par['nyxta%'] = 0.25
-    par['argia%'] = 0.75
-    par['oresnyxta'] = par.get('oresnyxta', 0)
-    par['oresargia'] = par.get('oresargia', 0)
-    par['meresargia'] = par.get('meresargia', 0)
-    par['imeromistio'] = rnd(par['misthos'] / par['minasmeres'])
-    par['oromistio'] = rnd(par['imeromistio'] *
-                           par['bdommeres'] / par['bdomores'])
-    if par['meres'] == par['minasmeres']:
-        par['apodnormal'] = rnd(par['misthos'])
+    par['ores_nyxta'] = par.get('ores_nyxta', 0)
+    par['ores_argia'] = par.get('ores_argia', 0)
+    par['ores_yperergasia'] = par.get('ores_yperergasia', 0)
+    par['meres_argia'] = par.get('meres_argia', 0)
+    fin = {'par': par}
+    # Έλεγχοι για να έχουμε είτε μισθο είτε ημερομίσθιο είτε ωρομίσθιο
+    if 'misthos' in par and 'imeromisthio' in par and 'oromisthio' in par:
+        fin['apo'] = {'error': 'misthos, imeromisthio, oromisthio mazi'}
+        return fin
+    elif 'misthos' in par and 'imeromisthio' in par:
+        fin['apo'] = {'error': 'misthos, imeromisthio together'}
+        return fin
+    elif 'misthos' in par and 'oromisthio' in par:
+        fin['apo'] = {'error': 'misthos, oromisthio together'}
+        return fin
+    elif 'imeromisthio' in par and 'oromisthio' in par:
+        fin['apo'] = {'error': 'misthos, oromisthio together'}
+        return fin
+    # Αφου σιγουρέψαμε ότι δεν υπάρχουν διπλοί, τριπλοί συνεχίζουμε
+    apo = {}
+    if 'misthos' in par:
+        apo['imeromisthio'] = rnd(par['misthos'] / s.EFKA_MERES_MHNA)
+        apo['oromisthio'] = rnd(apo['imeromisthio'] *
+                                s.EFKA_MERES_BDOMADA / s.EFKA_ORES_BDOMADA)
+        apo['a_meres'] = rnd(par['meres'] / s.EFKA_MERES_MHNA * par['misthos'])
+        apo['a_yperergasia'] = rnd(par['ores_yperergasia'] * apo['oromisthio'])
+        apo['a_nyxta'] = rnd(par['ores_nyxta'] *
+                             apo['oromisthio'] * s.POSOSTO_NYXTA)
+        apo['a_argia_ores'] = rnd(par['ores_argia'] *
+                                  apo['oromisthio'] * s.POSOSTO_ARGIA)
+        apo['a_argia_meres'] = rnd(par['meres_argia'] *
+                                   apo['imeromisthio'] * s.POSOSTO_ARGIA)
+        apo['a_total'] = rnd(apo['a_meres'] + apo['a_yperergasia'] +
+                             apo['a_nyxta'] + apo['a_argia_ores'] +
+                             apo['a_argia_meres'])
+        apo['meres_efka'] = par['meres']
+        fin['apo'] = apo
+    elif 'imeromisthio' in par:
+        apo['oromisthio'] = rnd(par['imeromisthio'] *
+                                s.EFKA_MERES_BDOMADA / s.EFKA_ORES_BDOMADA)
+        apo['a_meres'] = rnd(par['meres'] * par['imeromisthio'])
+        apo['a_yperergasia'] = rnd(par['ores_yperergasia'] * apo['oromisthio'])
+        apo['a_nyxta'] = rnd(par['ores_nyxta'] *
+                             apo['oromisthio'] * s.POSOSTO_NYXTA)
+        apo['a_argia_ores'] = rnd(par['ores_argia'] *
+                                  apo['oromisthio'] * s.POSOSTO_ARGIA)
+        apo['a_argia_meres'] = rnd(par['meres_argia'] *
+                                   par['imeromisthio'] * s.POSOSTO_ARGIA)
+        apo['a_total'] = rnd(apo['a_meres'] + apo['a_yperergasia'] +
+                             apo['a_nyxta'] + apo['a_argia_ores'] +
+                             apo['a_argia_meres'])
+        apo['meres_efka'] = par['meres']
+        fin['apo'] = apo
+    elif 'oromisthio' in par:
+        apo['a_ores'] = rnd(par['ores'] * par['oromisthio'])
+        apo['a_yperergasia'] = rnd(par['ores_yperergasia'] * par['oromisthio'])
+        apo['a_nyxta'] = rnd(par['ores_nyxta'] *
+                             par['oromisthio'] * s.POSOSTO_NYXTA)
+        apo['a_argia_ores'] = rnd(par['ores_argia'] *
+                                  par['oromisthio'] * s.POSOSTO_ARGIA)
+        apo['a_total'] = rnd(apo['a_ores'] + apo['a_yperergasia'] +
+                             apo['a_nyxta'] + apo['a_argia_ores'])
+
+        apo['oresAnaMera'] = rnd(par['ores'] / par['meres'])
+        apo['imeromisthio'] = rnd(apo['oresAnaMera'] * par['oromisthio'])
+        if apo['imeromisthio'] >= s.EFKA_CLASS_1:
+            par['meres_efka'] = par['meres']
+        else:
+            par['meres_efka'] = rnd(apo['a_total'] / s.EFKA_CLASS_1, 0)
+
+        fin['apo'] = apo
     else:
-        par['apodnormal'] = rnd(
-            par['meres'] / par['minasmeres'] * par['misthos'])
-    par['prosnyxta'] = rnd(par['oresnyxta'] *
-                           par['oromistio'] * par['nyxta%'])
-    par['prosargiaores'] = rnd(par['oresargia']
-                               * par['oromistio'] * par['argia%'])
-    par['prosargiameres'] = rnd(par['meresargia']
-                                * par['imeromistio'] * par['argia%'])
-    par['apodperiodoy'] = rnd(
-        par['apodnormal'] + par['prosnyxta']
-        + par['prosargiameres'] + par['prosargiaores'])
-    par['meresEFKA'] = par['meres']
-    defka = calc_efka(dbf, par['kad'], par['eid'],
-                      par['per'], par['apodperiodoy'])
-    final = {**par, **defka}
-    return final
-
-
-def calc_imeromistio(dbf, par):
-    """Υπολογισμός μηνιαίων αποδοχών ημερομισθίων
-        par: {
-            'per': 201903,
-            'kad': 5540,
-            'eid': 913230,
-            'imeromistio': 25.44,
-            'meres': 26
-        }
-
-    """
-    par['month_year'] = humanize_period(par['per'])
-    par['misth_type'] = 'Μισθοδοσία ημερομισθίων'
-    par['bdommeres'] = par.get('bdommeres', 6)
-    par['bdomores'] = par.get('bdomores', 40)
-    par['nyxta%'] = 0.25
-    par['argia%'] = 0.75
-    par['oresnyxta'] = par.get('oresnyxta', 0)
-    par['oresargia'] = par.get('oresargia', 0)
-    par['meresargia'] = par.get('meresargia', 0)
-    par['oromistio'] = rnd(par['imeromistio'] *
-                           par['bdommeres'] / par['bdomores'])
-    par['apodnormal'] = rnd(par['imeromistio'] * par['meres'])
-    par['prosnyxta'] = rnd(par['oresnyxta'] *
-                           par['oromistio'] * par['nyxta%'])
-    par['prosargiaores'] = rnd(par['oresargia']
-                               * par['oromistio'] * par['argia%'])
-    par['prosargiameres'] = rnd(par['meresargia']
-                                * par['imeromistio'] * par['argia%'])
-    par['apodperiodoy'] = rnd(
-        par['apodnormal'] + par['prosnyxta']
-        + par['prosargiameres'] + par['prosargiaores'])
-    par['meresEFKA'] = par['meres']
-    defka = calc_efka(dbf, par['kad'], par['eid'],
-                      par['per'], par['apodperiodoy'])
-    final = {**par, **defka}
-    return final
-
-
-def calc_oromistio(dbf, par):
-    """Υπολογισμός μηνιαίων αποδοχών ωρομισθίων
-        par: {
-            'per': 201903,
-            'kad': 5540,
-            'eid': 913230,
-            'oromistio': 5.7,
-            'ores': 22,
-            'meres': 20
-        }
-
-    """
-    par['month_year'] = humanize_period(par['per'])
-    par['misth_type'] = 'Μισθοδοσία ωρομισθίων'
-    par['bdommeres'] = par.get('bdommeres', 6)
-    par['bdomores'] = par.get('bdomores', 40)
-    par['nyxta%'] = 0.25
-    par['argia%'] = 0.75
-    par['class1'] = 11.06
-    par['oresnyxta'] = par.get('oresnyxta', 0)
-    par['oresargia'] = par.get('oresargia', 0)
-    par['apodnormal'] = rnd(par['oromistio'] * par['ores'])
-    par['prosnyxta'] = rnd(par['oresnyxta'] *
-                           par['oromistio'] * par['nyxta%'])
-    par['prosargiaores'] = rnd(par['oresargia']
-                               * par['oromistio'] * par['argia%'])
-    par['apodperiodoy'] = rnd(
-        par['apodnormal'] + par['prosnyxta'] + par['prosargiaores']
-    )
-    par['oresAnaMera'] = rnd(par['ores'] / par['meres'])
-    par['imeromistio'] = rnd(par['oresAnaMera'] * par['oromistio'])
-    if par['imeromistio'] >= par['class1']:
-        par['meresEFKA'] = par['meres']
-    else:
-        par['meresEFKA'] = rnd(par['apodperiodoy'] / par['class1'], 0)
-    defka = calc_efka(dbf, par['kad'], par['eid'],
-                      par['per'], par['apodperiodoy'])
-    final = {**par, **defka}
-    return final
+        fin['apo'] = {'error': 'Λάθος τύπος μισθοδοσίας'}
+        return fin
+    # Εφ όσον έχουν πάει όλα καλά μέχρι εδώ συνεχίζουμε
+    efka = calc_efka(osyk_db, par['kad'], par['eid'], par['per'],
+                     apo['a_total'])
+    fin['efka'] = efka
+    year = str(par['per'])[:4]
+    taxes = calc_tax_monthly(year, efka['amount-after-efka'])
+    fin['taxes'] = taxes
+    return fin
