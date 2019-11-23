@@ -1,10 +1,10 @@
 """Rest API for EFKA"""
+import datetime
 import hug
 import osyk
 import efka
-# import mis
 import taxes
-from mis import calc_mis
+from mis import calc_mis, calc_mikta_apo_kathara
 DB_OSYK = 'osyk.sql3'
 
 
@@ -55,59 +55,25 @@ def calc_efka(kad: hug.types.text,
     return efka.calc_efka(DB_OSYK, kad, eid, period, amount)
 
 
-@hug.get('/pmina', examples='kad=5241&eid=532030&per=201911&misthos=858')
-def c_misthos(kad: hug.types.text,
-              eid: hug.types.text,
-              per: hug.types.number,
-              misthos: hug.types.float_number,
-              meres: hug.types.float_number = 25,
-              oresnyxta: hug.types.float_number = 0,
-              oresargia: hug.types.float_number = 0,
-              meresargia: hug.types.float_number = 0,
-              yperergasia: hug.types.float_number = 0
-              ):
+@hug.get('/payroll', examples='kad=5241&eid=532030&per=201911&typ=1&val=858')
+def c_apod(kad: hug.types.text,
+           eid: hug.types.text,
+           per: hug.types.number,
+           typ: hug.types.number,
+           val: hug.types.float_number,
+           meres: hug.types.float_number = 0,
+           ores: hug.types.float_number = 0,
+           oresnyxta: hug.types.float_number = 0,
+           oresargia: hug.types.float_number = 0,
+           meresargia: hug.types.float_number = 0,
+           yperergasia: hug.types.float_number = 0,
+           paidia: hug.types.number = 0
+           ):
     adi = {
-        'kad': kad, 'eid': eid, 'per': per, 'misthos': misthos, 'meres': meres,
-        'ores_nyxta': oresnyxta, 'ores_argia': oresargia,
-        'meres_argia': meresargia, 'ores_yperergasia': yperergasia
-    }
-    return calc_mis(adi, DB_OSYK)
-
-
-@hug.get('/pmera', examples='kad=5241&eid=532030&per=201911&imeromisthio=34.32&meres=25')
-def c_imeromistio(kad: hug.types.text,
-                  eid: hug.types.text,
-                  per: hug.types.number,
-                  imeromisthio: hug.types.float_number,
-                  meres: hug.types.float_number,
-                  oresnyxta: hug.types.float_number = 0,
-                  oresargia: hug.types.float_number = 0,
-                  meresargia: hug.types.float_number = 0,
-                  yperergasia: hug.types.float_number = 0
-                  ):
-    adi = {
-        'kad': kad, 'eid': eid, 'per': per, 'imeromisthio': imeromisthio,
+        'kad': kad, 'eid': eid, 'per': per, 'typ': typ, 'val': val,
         'meres': meres, 'ores_nyxta': oresnyxta, 'ores_argia': oresargia,
-        'meres_argia': meresargia, 'ores_yperergasia': yperergasia
-    }
-    return calc_mis(adi, DB_OSYK)
-
-
-@hug.get('/pora', examples='kad=5241&eid=532030&per=201911&oromisthio=5.15&ores=166.6&meres=25')
-def c_oromistio(kad: hug.types.text,
-                eid: hug.types.text,
-                per: hug.types.number,
-                oromisthio: hug.types.float_number,
-                ores: hug.types.float_number,
-                meres: hug.types.number,
-                oresnyxta: hug.types.float_number = 0,
-                oresargia: hug.types.float_number = 0,
-                yperergasia: hug.types.float_number = 0
-                ):
-    adi = {
-        'kad': kad, 'eid': eid, 'per': per, 'oromisthio': oromisthio,
-        'ores': ores, 'ores_nyxta': oresnyxta, 'ores_argia': oresargia,
-        'meres': meres, 'ores_yperergasia': yperergasia
+        'meres_argia': meresargia, 'ores_yperergasia': yperergasia,
+        'paidia': paidia, 'ores': ores
     }
     return calc_mis(adi, DB_OSYK)
 
@@ -115,3 +81,13 @@ def c_oromistio(kad: hug.types.text,
 @hug.get('/taxmonth', examples='year=2019&income=719.43')
 def c_tax_monthly(year: hug.types.number, income: hug.types.float_number):
     return taxes.calc_tax_monthly(year, income)
+
+
+@hug.get('/mikta', examples='kathara=1600&kad=5241&eid=532030&per=201911')
+def c_mikta_apo_kathara(kathara: hug.types.float_number,
+                        kad: hug.types.text,
+                        eid: hug.types.text,
+                        per: hug.types.number = 0,
+                        paidia: hug.types.number = 0
+                        ):
+    return calc_mikta_apo_kathara(kathara, kad, eid, per, paidia, DB_OSYK)

@@ -149,7 +149,8 @@ def calc_tax_period(year, monthly_income, children=0, barytis=14):
     tax['foros-poy-parakratithike-mina'] = rnd(
         tax['foros-poy-analogei-mina'] - tax['ekptosi-parakratithentos-foroy-mina'])
     tax['eea-mina'] = rnd(tax['eea'] / syn)
-    tax['total-tax-mina'] = tax['foros-poy-parakratithike-mina'] + tax['eea-mina']
+    tax['total-tax-mina'] = rnd(tax['foros-poy-parakratithike-mina'] +
+                                tax['eea-mina'])
     tax['katharo'] = rnd(monthly_income - tax['total-tax-mina'])
     return tax
 
