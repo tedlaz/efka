@@ -4,7 +4,7 @@ import hug
 import osyk
 import efka
 import taxes
-from mis import calc_mis, calc_mikta_apo_kathara
+from mis import calc_mis, calc_mikta_apo_kathara, calc_doro, calc_ea
 DB_OSYK = 'osyk.sql3'
 
 
@@ -76,6 +76,39 @@ def c_apod(kad: hug.types.text,
         'paidia': paidia, 'ores': ores
     }
     return calc_mis(adi, DB_OSYK)
+
+
+@hug.get('/doro', examples='kad=5241&eid=532030&per=201912&typ=2&val=858&dtyp=2')
+def c_doro(kad: hug.types.text,
+           eid: hug.types.text,
+           per: hug.types.number,
+           typ: hug.types.number,
+           val: hug.types.float_number,
+           dtyp: hug.types.number,
+           meres: hug.types.float_number = 0,
+           paidia: hug.types.number = 0
+           ):
+    adi = {
+        'kad': kad, 'eid': eid, 'per': per, 'typ': typ, 'val': val,
+        'meres': meres, 'doro_typ': dtyp, 'paidia': paidia
+    }
+    return calc_doro(adi, DB_OSYK)
+
+
+@hug.get('/ea', examples='kad=5241&eid=532030&per=201912&typ=1&val=858&meres=25')
+def c_doro(kad: hug.types.text,
+           eid: hug.types.text,
+           per: hug.types.number,
+           typ: hug.types.number,
+           val: hug.types.float_number,
+           meres: hug.types.float_number = 0,
+           paidia: hug.types.number = 0
+           ):
+    adi = {
+        'kad': kad, 'eid': eid, 'per': per, 'typ': typ, 'val': val,
+        'meres': meres, 'paidia': paidia
+    }
+    return calc_ea(adi, DB_OSYK)
 
 
 @hug.get('/taxmonth', examples='year=2019&income=719.43')

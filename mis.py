@@ -53,8 +53,8 @@ def calc_mis(par, osyk_db):
     par['mtype'] = 'Μισθοδοσία μηνός'
     fin = {'par': par}
     apo = {}
+    par['payroll_type'] = s.PTYPE[par['typ']]
     if par['typ'] == 1:
-        par['ttype'] = 'Μισθωτών'
         if par['meres'] == 0:
             par['meres'] = 25
         apo['misthos'] = par['val']
@@ -75,7 +75,6 @@ def calc_mis(par, osyk_db):
         apo['meres_efka'] = par['meres']
         fin['apo'] = apo
     elif par['typ'] == 2:
-        par['ttype'] = 'Ημερομισθίων'
         apo['imeromisthio'] = par['val']
         apo['oromisthio'] = rnd(par['val'] *
                                 s.EFKA_MERES_BDOMADA / s.EFKA_ORES_BDOMADA)
@@ -93,7 +92,6 @@ def calc_mis(par, osyk_db):
         apo['meres_efka'] = par['meres']
         fin['apo'] = apo
     elif par['typ'] == 3:
-        par['ttype'] = 'Ωρομισθίων'
         apo['oromisthio'] = par['val']
         apo['a_ores'] = rnd(par['ores'] * par['val'])
         apo['a_yperergasia'] = rnd(par['ores_yperergasia'] * par['val'])
@@ -132,35 +130,69 @@ def calc_doro(par, osyk_db):
             'total_meres': 15
         }
         dtyp: 1=Πάσχα, 2=Χριστούγεννα
+        Στην περίπτωση των ημερομισθίων θα μπορούσε να γίνει υπολογισμός
+        με βάση τις μικτές αποδοχές από Ιανουάριο έως Απρίλιο επί τον
+        συντελεστη 0.15385(0.6154 / 4)
     """
-    # Έλεγχοι για να έχουμε είτε μισθο είτε ημερομίσθιο είτε ωρομίσθιο
-    valid_par, error_dic = check_par(par)
-    if not valid_par:
-        return error_dic
     par['paidia'] = par.get('paidia', 0)
-    par['dtyp'] = par.get('dtyp', 2)
     fin = {'par': par}
-    if par['dtyp'] == 1:
+    if par['doro_typ'] == 1:
         syn = 6.5
+        orio_meres = 15
         par['mtype'] = 'Μισθοδοσία Δώρου Πάσχα'
     else:
         syn = 8
+        orio_meres = 25
         par['mtype'] = 'Μισθοδοσία Δώρου Χριστουγέννων'
     apo = {}
-    if par['type'] == 1:
-        par['ttype'] = 'Μισθωτών'
+    par['payroll_type'] = s.PTYPE[par['typ']]
+    if par['typ'] == 1:
         apo['a_doro'] = rnd(par['val'] / 8)
-    elif par['type'] == 2:
-        par['ttype'] = 'Ημερομισθίων'
+    elif par['typ'] == 2:
+        if par['meres'] == 0:
+            return {'error': 'Πρέπει να δώσετε ημέρες εργασίας (meres)'}
         apo['a_doro'] = rnd(par['val'] *
                             par['meres'] / syn)
-    elif par['type'] == 3:
-        par['ttype'] = 'Ωρομισθίων'
+        apo['orio_doroy'] = rnd(orio_meres * par['val'])
+        if apo['a_doro'] > apo['orio_doroy']:
+            apo['a_doro'] = rnd(apo['orio_doroy'])
+    elif par['typ'] == 3:
         apo['a_doro'] = rnd(par['val'] / 8)
     else:
         fin['apo'] = {'error': 'Λάθος τύπος μισθοδοσίας'}
         return fin
     apo['a_total'] = rnd(apo['a_doro'] * s.PROSAFKSISI_DOROY)
+    fin['apo'] = apo
+    efka = calc_efka(osyk_db, par['kad'], par['eid'], par['per'],
+                     apo['a_total'])
+    fin['efka'] = efka
+    year = str(par['per'])[:4]
+    taxes = calc_tax_doro_pasxa_epidoma_adeias(
+        year, efka['amount-after-efka'], par['paidia'])
+    fin['taxes'] = taxes
+    return fin
+
+
+def calc_ea(par, osyk_db):
+    """Υπολογισμός επιδόματος αδείας
+
+    """
+    par['mtype'] = 'Μισθοδοσία Επιδόματος Αδείας'
+    par['payroll_type'] = s.PTYPE[par['typ']]
+    fin = {'par': par}
+    apo = {}
+    apo['meresea'] = rnd(par['meres'] / 25 * 2)
+    apo['meso_imeromisthio'] = rnd(par['val'] / par['meres'])
+    if par['typ'] == 1:
+        if apo['meresea'] > 12.5:
+            apo['meresea'] = 12.5
+    elif par['typ'] == 2:
+        if apo['meresea'] > 13:
+            apo['meresea'] = 13
+    elif par['typ'] == 3:
+        if apo['meresea'] > 13:
+            apo['meresea'] = 13
+    apo['a_total'] = rnd(apo['meresea'] * apo['meso_imeromisthio'])
     fin['apo'] = apo
     efka = calc_efka(osyk_db, par['kad'], par['eid'], par['per'],
                      apo['a_total'])
@@ -193,10 +225,3 @@ def calc_mikta_apo_kathara(kat, kad, eid, per, paidia, osyk_db):
         arr['misthos'] = apr
     return {'kathara': kat, 'mikta': rnd(apr), 'kad': kad, 'eid': eid,
             'per': per, 'paidia': paidia, 'iterations': i}
-
-
-if __name__ == '__main__':
-    print(calc_mikta_apo_kathara(1600, 5241, 532030, 201911, 0, 'osyk.sql3'))
-    print(calc_doro({'imeromisthio': 55, 'kad': '5540', 'dtyp': 1,
-                     'eid': '348220', 'total_meres': 15,
-                     'per': 201904}, 'osyk.sql3'))

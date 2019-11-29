@@ -6,3 +6,4 @@ POSOSTO_NYXTA = 0.25
 POSOSTO_ARGIA = 0.75
 POSOSTO_YPERORIA = 0.4
 PROSAFKSISI_DOROY = 1 + (1.0 / 24.0)
+PTYPE = {1: 'Μισθωτών', 2: 'Ημερομισθίων', 3: 'Ωρομισθίων'}
