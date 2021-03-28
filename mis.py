@@ -73,7 +73,6 @@ def calc_mis(par, osyk_db):
                              apo['a_nyxta'] + apo['a_argia_ores'] +
                              apo['a_argia_meres'])
         apo['meres_efka'] = par['meres']
-        fin['apo'] = apo
     elif par['typ'] == 2:
         apo['imeromisthio'] = par['val']
         apo['oromisthio'] = rnd(par['val'] *
@@ -90,7 +89,6 @@ def calc_mis(par, osyk_db):
                              apo['a_nyxta'] + apo['a_argia_ores'] +
                              apo['a_argia_meres'])
         apo['meres_efka'] = par['meres']
-        fin['apo'] = apo
     elif par['typ'] == 3:
         apo['oromisthio'] = par['val']
         apo['a_ores'] = rnd(par['ores'] * par['val'])
@@ -108,11 +106,10 @@ def calc_mis(par, osyk_db):
             par['meres_efka'] = par['meres']
         else:
             par['meres_efka'] = rnd(apo['a_total'] / s.EFKA_CLASS_1, 0)
-
-        fin['apo'] = apo
     else:
         fin['apo'] = {'error': 'Λάθος τύπος μισθοδοσίας'}
         return fin
+    fin['apo'] = apo
     # Εφ όσον έχουν πάει όλα καλά μέχρι εδώ συνεχίζουμε
     efka = calc_efka(osyk_db, par['kad'], par['eid'], par['per'],
                      apo['a_total'])
@@ -162,6 +159,7 @@ def calc_doro(par, osyk_db):
         fin['apo'] = {'error': 'Λάθος τύπος μισθοδοσίας'}
         return fin
     apo['a_total'] = rnd(apo['a_doro'] * s.PROSAFKSISI_DOROY)
+    apo['meres_efka'] = 0
     fin['apo'] = apo
     efka = calc_efka(osyk_db, par['kad'], par['eid'], par['per'],
                      apo['a_total'])
@@ -174,7 +172,8 @@ def calc_doro(par, osyk_db):
 
 
 def calc_ea(par, osyk_db):
-    """Υπολογισμός επιδόματος αδείας
+    """
+    Υπολογισμός επιδόματος αδείας
 
     """
     par['mtype'] = 'Μισθοδοσία Επιδόματος Αδείας'
@@ -193,6 +192,7 @@ def calc_ea(par, osyk_db):
         if apo['meresea'] > 13:
             apo['meresea'] = 13
     apo['a_total'] = rnd(apo['meresea'] * apo['meso_imeromisthio'])
+    apo['meres_efka'] = 0
     fin['apo'] = apo
     efka = calc_efka(osyk_db, par['kad'], par['eid'], par['per'],
                      apo['a_total'])
@@ -201,6 +201,21 @@ def calc_ea(par, osyk_db):
     taxes = calc_tax_doro_pasxa_epidoma_adeias(
         year, efka['amount-after-efka'], par['paidia'])
     fin['taxes'] = taxes
+    return fin
+
+
+def calc_astheneia(par, osyk_db):
+    fin = {'par': par}
+    apo = {}
+    apo['a_eos3'] = rnd(par['eos3'] * par['imeromisthio'] / 2)
+    apo['a_more3'] = rnd(par['more3'] * par['imeromisthio'])
+    apo['a_efka'] = rnd(apo['a_eos3'] + apo['a_more3'])
+    efka = calc_efka(
+        osyk_db, par['kad'], par['eid'], par['per'], apo['a_efka'])
+    efka_epidoma = calc_efka(
+        osyk_db, par['kad'], par['eid'], par['per'], par['epidoma'])
+    fin['apo'] = apo
+    fin['efka'] = efka
     return fin
 
 

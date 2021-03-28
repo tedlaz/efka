@@ -90,7 +90,7 @@ def calc_tax(year, income, children=0):
     children = int(children)
     data = TAX_DATA.get(year, None)
     if not data:
-        return {'error': f'Δεν υπάρχουν δεδομένα για το έτος {year}'}
+        return {'error': f'Δεν υπάρχουν κλίμακες φόρου για το έτος {year}'}
     data['etos'] = year
     data['forologiteo'] = income
     data['paidia'] = children

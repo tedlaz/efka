@@ -1,3 +1,6 @@
+"""
+Βασικές παράμετροι συστήματος
+"""
 EFKA_MERES_MHNA = 25
 EFKA_MERES_BDOMADA = 6
 EFKA_ORES_BDOMADA = 40
